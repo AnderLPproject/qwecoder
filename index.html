@@ -538,7 +538,7 @@
         <div class="setting-row">
             <span class="setting-label">Bloqueo por inactividad</span>
             <select id="lock-select" onchange="changeLockType()">
-                <option value="notes" selected>Bloc de notas</option>
+                <option value="notes">Bloc de notas</option>
                 <option value="pin">PIN de acceso</option>
                 <option value="both">Ambos</option>
             </select>
@@ -557,7 +557,7 @@
         <div class="setting-row">
             <span class="setting-label">Teclado con letra "Ñ"</span>
             <label class="ios-switch">
-                <input type="checkbox" id="switch-nn" checked onchange="actualizarTeclado()">
+                <input type="checkbox" id="switch-nn" onchange="actualizarTeclado()">
                 <span class="slider"></span>
             </label>
         </div>
@@ -565,7 +565,7 @@
             <span class="setting-label">Límite de conteo cíclico</span>
             <div class="cycle-buttons">
                 <button class="cycle-btn" id="cycle-2" onclick="setCycleLimit(2)">2</button>
-                <button class="cycle-btn active" id="cycle-3" onclick="setCycleLimit(3)">3</button>
+                <button class="cycle-btn" id="cycle-3" onclick="setCycleLimit(3)">3</button>
                 <button class="cycle-btn" id="cycle-4" onclick="setCycleLimit(4)">4</button>
                 <button class="cycle-btn" id="cycle-5" onclick="setCycleLimit(5)">5</button>
                 <button class="cycle-btn" id="cycle-6" onclick="setCycleLimit(6)">6</button>
@@ -581,7 +581,13 @@
     let boldClicks = 0;
     let lastBoldTime = 0;
     let lastShiftTime = 0;
+    
+    // Carga inicial de datos desde localStorage o valores por defecto
     let selectedPalette = parseInt(localStorage.getItem('qwecoder_palette')) || 0;
+    let lockTypeSaved = localStorage.getItem('qwecoder_lock_type') || 'notes';
+    let switchNnSaved = localStorage.getItem('qwecoder_switch_nn') !== 'false'; // true por defecto
+    let limiteCiclo = parseInt(localStorage.getItem('qwecoder_cycle_limit')) || 3;
+
     let dbNotas = JSON.parse(localStorage.getItem('qwecoder_notes_array')) || [{id: Date.now(), title: "Nota Inicial", content: ""}];
     let idNotaActiva = localStorage.getItem('qwecoder_active_note_id') || dbNotas[0].id;
     const esTelefono = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
@@ -595,7 +601,13 @@
         { name: "mono", bg: "#000000", container: "#121212", input: "#1c1c1c", result: "#181818", accent: "#ffffff", text: "#ffffff", textMuted: "#aaaaaa", border: "#45475a", btnTxt: "#000000", switchBg: "#45475a" }
     ];
 
+    const tecladoConNn = [['q','w','e','r','t','y','u','i','o','p'],['a','s','d','f','g','h','j','k','l','ñ'],['z','x','c','v','b','n','m']];
+    const tecladoSinNn = [['q','w','e','r','t','y','u','i','o','p'],['a','s','d','f','g','h','j','k','l'],['z','x','c','v','b','n','m']];
+    let teclado = tecladoConNn; 
+    let modo = 'cifrar';
+
     window.addEventListener('DOMContentLoaded', () => {
+        // Inicializar Bloc de notas
         let notaEncontrada = dbNotas.find(n => n.id == idNotaActiva);
         if (!notaEncontrada) {
             idNotaActiva = dbNotas[0].id;
@@ -603,7 +615,21 @@
         }
         document.getElementById('notes-editor').innerHTML = notaEncontrada.content;
         renderSidebar();
+        
+        // Aplicar paleta guardada
         changePalette(selectedPalette);
+
+        // Cargar tipo de bloqueo guardado
+        document.getElementById('lock-select').value = lockTypeSaved;
+
+        // Cargar estado de la Ñ guardado
+        document.getElementById('switch-nn').checked = switchNnSaved;
+        teclado = switchNnSaved ? tecladoConNn : tecladoSinNn;
+
+        // Cargar límite de ciclo guardado
+        document.getElementById(`cycle-${limiteCiclo}`).classList.add('active');
+        
+        procesar();
     });
 
     function createNewNote() {
@@ -750,6 +776,7 @@
     }
 
     function changeLockType() {
+        localStorage.setItem('qwecoder_lock_type', document.getElementById('lock-select').value);
         resetInactivityTimer();
     }
 
@@ -817,7 +844,7 @@
 
     function resetInactivityTimer() {
         clearTimeout(timeoutBloqueo);
-        if (pantallaActActive === "app") {
+        if (pantallaActiva === "app") {
             timeoutBloqueo = setTimeout(activarPantallaBloqueo, 2 * 60 * 1000);
         }
     }
@@ -855,15 +882,23 @@
 
     document.addEventListener('mousemove', resetInactivityTimer);
     document.addEventListener('click', resetInactivityTimer);
-
-    const tecladoConNn = [['q','w','e','r','t','y','u','i','o','p'],['a','s','d','f','g','h','j','k','l','ñ'],['z','x','c','v','b','n','m']];
-    const tecladoSinNn = [['q','w','e','r','t','y','u','i','o','p'],['a','s','d','f','g','h','j','k','l'],['z','x','c','v','b','n','m']];
-    let teclado = tecladoConNn; let modo = 'cifrar';
-    let limiteCiclo = 3;
     
     function toggleAdvancedMenu() { document.getElementById('adv-menu').classList.toggle('open'); }
-    function actualizarTeclado() { teclado = document.getElementById('switch-nn').checked ? tecladoConNn : tecladoSinNn; procesar(); }
-    function setCycleLimit(limite) { document.getElementById(`cycle-${limiteCiclo}`).classList.remove('active'); limiteCiclo = limite; document.getElementById(`cycle-${limiteCiclo}`).classList.add('active'); procesar(); }
+    
+    function actualizarTeclado() { 
+        const isChecked = document.getElementById('switch-nn').checked;
+        localStorage.setItem('qwecoder_switch_nn', isChecked);
+        teclado = isChecked ? tecladoConNn : tecladoSinNn; 
+        procesar(); 
+    }
+    
+    function setCycleLimit(limite) { 
+        document.getElementById(`cycle-${limiteCiclo}`).classList.remove('active'); 
+        limiteCiclo = limite; 
+        localStorage.setItem('qwecoder_cycle_limit', limite);
+        document.getElementById(`cycle-${limiteCiclo}`).classList.add('active'); 
+        procesar(); 
+    }
     
     const textarea = document.getElementById('input-text');
     textarea.addEventListener('keydown', function(e) {
