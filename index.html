@@ -542,12 +542,12 @@
         <div class="setting-row">
             <span class="setting-label">Paleta de color</span>
             <div class="color-palette">
-                <div class="color-dot active" style="background:#cba6f7;" onclick="changePalette(0)"></div>
-                <div class="color-dot" style="background:#f38ba8;" onclick="changePalette(1)"></div>
-                <div class="color-dot" style="background:#89b4fa;" onclick="changePalette(2)"></div>
-                <div class="color-dot" style="background:#a6e3a1;" onclick="changePalette(3)"></div>
-                <div class="color-dot" style="background:#ffffff; border: 1px solid #45475a;" onclick="changePalette(4)"></div>
-                <div class="color-dot" style="background:#000000; border: 1px solid #45475a;" onclick="changePalette(5)"></div>
+                <div class="color-dot" id="dot-0" style="background:#cba6f7;" onclick="changePalette(0)"></div>
+                <div class="color-dot" id="dot-1" style="background:#f38ba8;" onclick="changePalette(1)"></div>
+                <div class="color-dot" id="dot-2" style="background:#89b4fa;" onclick="changePalette(2)"></div>
+                <div class="color-dot" id="dot-3" style="background:#a6e3a1;" onclick="changePalette(3)"></div>
+                <div class="color-dot" id="dot-4" style="background:#ffffff; border: 1px solid #45475a;" onclick="changePalette(4)"></div>
+                <div class="color-dot" id="dot-5" style="background:#000000; border: 1px solid #45475a;" onclick="changePalette(5)"></div>
             </div>
         </div>
         <div class="setting-row">
@@ -576,8 +576,10 @@
     let pantallaActiva = "notes"; 
     let boldClicks = 0;
     let lastBoldTime = 0;
-    let selectedPalette = 0;
     let lastShiftTime = 0;
+
+    // Cargar paleta guardada o usar la 0 (morado) por defecto
+    let selectedPalette = parseInt(localStorage.getItem('qwecoder_palette')) || 0;
 
     let dbNotas = JSON.parse(localStorage.getItem('qwecoder_notes_array')) || [{id: Date.now(), title: "Nota Inicial", content: ""}];
     let idNotaActiva = localStorage.getItem('qwecoder_active_note_id') || dbNotas[0].id;
@@ -601,6 +603,9 @@
         }
         document.getElementById('notes-editor').innerHTML = notaEncontrada.content;
         renderSidebar();
+        
+        // Aplicar la paleta guardada al iniciar la app
+        changePalette(selectedPalette);
     });
 
     function createNewNote() {
@@ -684,7 +689,7 @@
         const mes = String(ahora.getMonth() + 1).padStart(2, '0');
         const hora = String(ahora.getHours()).padStart(2, '0');
         const minutos = String(ahora.getMinutes()).padStart(2, '0');
-        return mes + hora + minutos; 
+        return mes + hora + minutes; 
     }
 
     function toggleKeypad() {
@@ -788,8 +793,14 @@
 
     function changePalette(index) {
         selectedPalette = index;
+        localStorage.setItem('qwecoder_palette', index); // Guardar permanentemente la selección
+        
         const dots = document.querySelectorAll('.color-dot');
-        dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+        dots.forEach(dot => dot.classList.remove('active'));
+        
+        const activeDot = document.getElementById(`dot-${index}`);
+        if(activeDot) activeDot.classList.add('active');
+        
         applyColors();
     }
 
