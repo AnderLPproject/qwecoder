@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToolX</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22 width=%2216%22 height=%2216%22><text y=%2214%22 font-size=%2214%22>✏️</text></svg>">
+    <style>
+        :root {
+            --bg-color: #1e1e2e;
+            --container-bg: #252538;
+            --text-color: #cdd6f4;
+            --text-muted: #bac2de;
+            --input-bg: #11111b;
+            --result-bg: #181825;
+            --border-color: #45475a;
+            --accent-color: #cba6f7;
+            --primary-btn: #cba6f7;
+            --primary-btn-text: #11111b;
+            --switch-bg: #45475a;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 15px;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .lock-container {
+            background-color: var(--container-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 320px;
+            text-align: center;
+            box-sizing: border-box;
+            display: none;
+            margin: auto;
+        }
+        
+        .display-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            width: 100%;
+        }
+
+        .pin-display {
+            flex: 1;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            height: 45px;
+            font-size: 24px;
+            letter-spacing: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-color);
+            font-weight: bold;
+            padding-left: 8px;
+            box-sizing: border-box;
+        }
+
+        .toggle-keypad-btn {
+            background-color: var(--border-color);
+            border: none;
+            color: var(--text-color);
+            width: 45px;
+            height: 45px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .keypad {
+            display: none;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+            width: 100%;
+        }
+        .key-btn {
+            background-color: var(--border-color);
+            color: var(--text-color);
+            border: none;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .key-btn.clear {
+            background-color: #f38ba8;
+            color: #11111b;
+        }
+
+        .notes-container {
+            background-color: var(--container-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 450px;
+            box-sizing: border-box;
+            display: block;
+        }
+        .notes-toolbar {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .notes-btn {
+            background-color: var(--border-color);
+            color: var(--text-color);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .notes-btn.accent {
+            background-color: var(--accent-color);
+            color: var(--primary-btn-text);
+        }
+        .notes-manager-toggle {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: var(--accent-color);
+            font-size: 18px;
+            cursor: pointer;
+        }
+        
+        .notes-sidebar {
+            display: none;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 10px;
+            padding: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .notes-sidebar.open {
+            display: block;
+        }
+        .notes-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        .notes-list-item:hover, .notes-list-item.active {
+            background-color: var(--border-color);
+        }
+        .notes-list-item .delete-note-btn {
+            color: #f38ba8;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .notes-editor {
+            width: 100%;
+            min-height: 250px;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            outline: none;
+            font-size: 16px;
+        }
+
+        .container {
+            display: none; 
+            background-color: var(--container-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        .manual-lock-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--accent-color);
+            padding: 5px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--accent-color);
+            margin-top: 0;
+            font-size: 24px;
+        }
+        
+        .label-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0 5px;
+        }
+        
+        label {
+            font-weight: bold;
+        }
+
+        .textarea-container {
+            position: relative;
+            width: 100%;
+        }
+
+        textarea {
+            width: 100%;
+            height: 90px;
+            padding: 10px;
+            padding-right: 40px; 
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-size: 16px;
+            box-sizing: border-box;
+            resize: none;
+            display: block;
+        }
+        
+        textarea.paste-only {
+            background-color: var(--result-bg);
+            border-style: dashed;
+        }
+
+        textarea.masked {
+            -webkit-text-security: disc;
+            color: var(--border-color);
+        }
+
+        .mask-btn {
+            position: absolute;
+            right: 12px;
+            top: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: var(--text-muted);
+            z-index: 5;
+        }
+
+        .clear-btn {
+            position: absolute;
+            right: 12px;
+            bottom: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--text-muted);
+            z-index: 5;
+            font-weight: bold;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            background-color: var(--border-color);
+            color: var(--text-color);
+            font-size: 14px;
+        }
+        .mode-btn.active {
+            background-color: var(--accent-color);
+            color: var(--primary-btn-text);
+        }
+
+        .result-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .result-box {
+            background-color: var(--result-bg);
+            padding: 15px;
+            padding-right: 65px;
+            border-radius: 6px;
+            border-left: 5px solid #a6e3a1;
+            min-height: 40px;
+            word-wrap: break-word;
+            font-family: monospace;
+            font-size: 18px;
+            box-sizing: border-box;
+        }
+
+        .copy-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: var(--border-color);
+            border: none;
+            color: var(--text-color);
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .adv-toggle-btn {
+            width: 100%;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            color: var(--accent-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .adv-menu {
+            display: none;
+            background-color: var(--result-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        .adv-menu.open {
+            display: block;
+        }
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .setting-row:last-child {
+            margin-bottom: 0;
+        }
+        .setting-label {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        
+        .ios-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+        .ios-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--switch-bg);
+            transition: .3s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        input:checked + .slider {
+            background-color: #a6e3a1;
+        }
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        select {
+            background-color: var(--border-color);
+            color: var(--text-color);
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            outline: none;
+        }
+        
+        .cycle-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        .cycle-btn {
+            width: 35px;
+            height: 35px;
+            border: none;
+            background-color: var(--border-color);
+            color: var(--text-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .cycle-btn.active {
+            background-color: var(--accent-color);
+            color: var(--primary-btn-text);
+        }
+        .color-palette {
+            display: flex;
+            gap: 6px;
+        }
+        .color-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .color-dot.active {
+            border-color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+
+<div class="lock-container" id="lock-screen">
+    <div class="display-row">
+        <div class="pin-display" id="pin-display">------</div>
+        <button class="toggle-keypad-btn" onclick="toggleKeypad()">⌨️</button>
+    </div>
+    <div class="keypad" id="virtual-keypad">
+        <button class="key-btn" onclick="pressKey('1')">1</button>
+        <button class="key-btn" onclick="pressKey('2')">2</button>
+        <button class="key-btn" onclick="pressKey('3')">3</button>
+        <button class="key-btn" onclick="pressKey('4')">4</button>
+        <button class="key-btn" onclick="pressKey('5')">5</button>
+        <button class="key-btn" onclick="pressKey('6')">6</button>
+        <button class="key-btn" onclick="pressKey('7')">7</button>
+        <button class="key-btn" onclick="pressKey('8')">8</button>
+        <button class="key-btn" onclick="pressKey('9')">9</button>
+        <button class="key-btn clear" onclick="clearPin()">✖</button>
+        <button class="key-btn" onclick="pressKey('0')">0</button>
+        <button class="key-btn" style="visibility: hidden;"></button>
+    </div>
+</div>
+
+<div class="notes-container" id="notes-screen">
+    <div class="notes-toolbar">
+        <button class="notes-btn" onclick="execCmd('bold')">B</button>
+        <button class="notes-btn" onclick="execCmd('italic')">I</button>
+        <button class="notes-btn" onclick="execCmd('strikeThrough')">S</button>
+        <button class="notes-btn accent" onclick="createNewNote()">+ Nueva</button>
+        <button class="notes-manager-toggle" onclick="toggleNotesSidebar()">📁</button>
+    </div>
+    <div class="notes-sidebar" id="notes-sidebar"></div>
+    <div class="notes-editor" contenteditable="true" placeholder="Escribe tus notas aquí..." id="notes-editor" oninput="saveCurrentNote()"></div>
+</div>
+
+<div class="container" id="app-screen">
+    <button class="manual-lock-btn" id="manual-lock" onclick="activarPantallaBloqueo()">🔒</button>
+
+    <h1>Qwecoder X</h1>
+    
+    <div class="mode-selector">
+        <button class="mode-btn active" id="btn-cifrar" onclick="setMode('cifrar')">Cifrar Mensaje</button>
+        <button class="mode-btn" id="btn-descifrar" onclick="setMode('descifrar')">Descifrar Mensaje</button>
+    </div>
+
+    <div class="label-container">
+        <label for="input-text" id="input-label">Escribe el mensaje:</label>
+    </div>
+    
+    <div class="textarea-container">
+        <textarea id="input-text" placeholder="Escribe aquí..." oninput="procesar()"></textarea>
+        <button class="mask-btn" id="mask-btn" onclick="toggleMask()">👁️</button>
+        <button class="clear-btn" id="clear-btn" onclick="limpiarTodo()">✖</button>
+    </div>
+
+    <div class="label-container">
+        <label>Resultado:</label>
+    </div>
+    
+    <div class="result-container">
+        <div class="result-box" id="output-text">Esperando texto...</div>
+        <button class="copy-btn" id="copy-btn" onclick="copiarAlPortapapeles()">Copiar</button>
+    </div>
+
+    <button class="adv-toggle-btn" onclick="toggleAdvancedMenu()">Ajustes Avanzados</button>
+    <div class="adv-menu" id="adv-menu">
+        <div class="setting-row">
+            <span class="setting-label">Bloqueo por inactividad</span>
+            <select id="lock-select" onchange="changeLockType()">
+                <option value="notes" selected>Bloc de notas</option>
+                <option value="pin">PIN de acceso</option>
+                <option value="both">Ambos</option>
+            </select>
+        </div>
+        <div class="setting-row">
+            <span class="setting-label">Paleta de color</span>
+            <div class="color-palette">
+                <div class="color-dot active" style="background:#cba6f7;" onclick="changePalette(0)"></div>
+                <div class="color-dot" style="background:#f38ba8;" onclick="changePalette(1)"></div>
+                <div class="color-dot" style="background:#89b4fa;" onclick="changePalette(2)"></div>
+                <div class="color-dot" style="background:#a6e3a1;" onclick="changePalette(3)"></div>
+                <div class="color-dot" style="background:#ffffff; border: 1px solid #45475a;" onclick="changePalette(4)"></div>
+                <div class="color-dot" style="background:#000000; border: 1px solid #45475a;" onclick="changePalette(5)"></div>
+            </div>
+        </div>
+        <div class="setting-row">
+            <span class="setting-label">Teclado con letra "Ñ"</span>
+            <label class="ios-switch">
+                <input type="checkbox" id="switch-nn" checked onchange="actualizarTeclado()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="setting-row">
+            <span class="setting-label">Límite de conteo cíclico</span>
+            <div class="cycle-buttons">
+                <button class="cycle-btn" id="cycle-2" onclick="setCycleLimit(2)">2</button>
+                <button class="cycle-btn active" id="cycle-3" onclick="setCycleLimit(3)">3</button>
+                <button class="cycle-btn" id="cycle-4" onclick="setCycleLimit(4)">4</button>
+                <button class="cycle-btn" id="cycle-5" onclick="setCycleLimit(5)">5</button>
+                <button class="cycle-btn" id="cycle-6" onclick="setCycleLimit(6)">6</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let pinIngresado = "";
+    let timeoutBloqueo = null;
+    let pantallaActiva = "notes"; 
+    let boldClicks = 0;
+    let lastBoldTime = 0;
+    let selectedPalette = 0;
+    let lastShiftTime = 0;
+
+    let dbNotas = JSON.parse(localStorage.getItem('qwecoder_notes_array')) || [{id: Date.now(), title: "Nota Inicial", content: ""}];
+    let idNotaActiva = localStorage.getItem('qwecoder_active_note_id') || dbNotas[0].id;
+
+    const esTelefono = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+
+    const paletas = [
+        { name: "purple", bg: "#1e1e2e", container: "#252538", input: "#11111b", result: "#181825", accent: "#cba6f7", text: "#cdd6f4", textMuted: "#bac2de", border: "#45475a", btnTxt: "#11111b", switchBg: "#45475a" },
+        { name: "red", bg: "#2a1b1f", container: "#372428", input: "#1c0f12", result: "#231417", accent: "#f38ba8", text: "#cdd6f4", textMuted: "#bac2de", border: "#45475a", btnTxt: "#11111b", switchBg: "#45475a" },
+        { name: "blue", bg: "#1b2030", container: "#24293d", input: "#0f121d", result: "#151927", accent: "#89b4fa", text: "#cdd6f4", textMuted: "#bac2de", border: "#45475a", btnTxt: "#11111b", switchBg: "#45475a" },
+        { name: "green", bg: "#1b2524", container: "#23322e", input: "#0f1715", result: "#141f1b", accent: "#a6e3a1", text: "#cdd6f4", textMuted: "#bac2de", border: "#45475a", btnTxt: "#11111b", switchBg: "#45475a" },
+        { name: "white", bg: "#f5f3f9", container: "#e8e3f2", input: "#d9d2e9", result: "#e2daef", accent: "#8839ef", text: "#4c4f69", textMuted: "#6c6f85", border: "#b7add1", btnTxt: "#f5f3f9", switchBg: "#b7add1" },
+        { name: "mono", bg: "#000000", container: "#121212", input: "#1c1c1c", result: "#181818", accent: "#ffffff", text: "#ffffff", textMuted: "#aaaaaa", border: "#45475a", btnTxt: "#000000", switchBg: "#45475a" }
+    ];
+
+    window.addEventListener('DOMContentLoaded', () => {
+        let notaEncontrada = dbNotas.find(n => n.id == idNotaActiva);
+        if (!notaEncontrada) {
+            idNotaActiva = dbNotas[0].id;
+            notaEncontrada = dbNotas[0];
+        }
+        document.getElementById('notes-editor').innerHTML = notaEncontrada.content;
+        renderSidebar();
+    });
+
+    function createNewNote() {
+        const nueva = { id: Date.now(), title: "Nueva nota", content: "" };
+        dbNotas.push(nueva);
+        idNotaActiva = nueva.id;
+        document.getElementById('notes-editor').innerHTML = "";
+        document.getElementById('notes-editor').focus();
+        saveNotesToStorage();
+        renderSidebar();
+    }
+
+    function selectNote(id) {
+        idNotaActiva = id;
+        const nota = dbNotas.find(n => n.id == id);
+        document.getElementById('notes-editor').innerHTML = nota ? nota.content : "";
+        localStorage.setItem('qwecoder_active_note_id', idNotaActiva);
+        renderSidebar();
+    }
+
+    function deleteNote(id, event) {
+        if(event) event.stopPropagation();
+        if(dbNotas.length <= 1) {
+            alert("Debes mantener al menos una nota activa.");
+            return;
+        }
+        dbNotas = dbNotas.filter(n => n.id != id);
+        if(idNotaActiva == id) {
+            idNotaActiva = dbNotas[0].id;
+            document.getElementById('notes-editor').innerHTML = dbNotas[0].content;
+        }
+        saveNotesToStorage();
+        renderSidebar();
+    }
+
+    function saveCurrentNote() {
+        const editor = document.getElementById('notes-editor');
+        const nota = dbNotas.find(n => n.id == idNotaActiva);
+        if(nota) {
+            nota.content = editor.innerHTML;
+            let plainText = editor.innerText.trim();
+            nota.title = plainText.substring(0, 20) || "Nota vacía";
+        }
+        saveNotesToStorage();
+        renderSidebar();
+    }
+
+    function saveNotesToStorage() {
+        localStorage.setItem('qwecoder_notes_array', JSON.stringify(dbNotas));
+        localStorage.setItem('qwecoder_active_note_id', idNotaActiva);
+    }
+
+    function renderSidebar() {
+        const sidebar = document.getElementById('notes-sidebar');
+        sidebar.innerHTML = "";
+        dbNotas.forEach(n => {
+            const item = document.createElement('div');
+            item.className = `notes-list-item ${n.id == idNotaActiva ? 'active' : ''}`;
+            item.onclick = () => selectNote(n.id);
+
+            const titleSpan = document.createElement('span');
+            titleSpan.innerText = n.title;
+            
+            const delBtn = document.createElement('button');
+            delBtn.className = "delete-note-btn";
+            delBtn.innerText = "✖";
+            delBtn.onclick = (e) => deleteNote(n.id, e);
+
+            item.appendChild(titleSpan);
+            item.appendChild(delBtn);
+            sidebar.appendChild(item);
+        });
+    }
+
+    function toggleNotesSidebar() {
+        document.getElementById('notes-sidebar').classList.toggle('open');
+    }
+
+    function obtenerClaveCorrecta() {
+        const ahora = new Date();
+        const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+        const hora = String(ahora.getHours()).padStart(2, '0');
+        const minutos = String(ahora.getMinutes()).padStart(2, '0');
+        return mes + hora + minutos; 
+    }
+
+    function toggleKeypad() {
+        const keypad = document.getElementById('virtual-keypad');
+        keypad.style.display = keypad.style.display === "grid" ? "none" : "grid";
+    }
+
+    function pressKey(num) {
+        if (pinIngresado.length < 6) {
+            pinIngresado += num;
+            actualizarPantallaPin();
+        }
+        if (pinIngresado.length === 6) {
+            verificarPin();
+        }
+    }
+
+    function clearPin() {
+        pinIngresado = "";
+        actualizarPantallaPin();
+    }
+
+    function actualizarPantallaPin() {
+        const d = document.getElementById('pin-display');
+        d.innerText = pinIngresado.padEnd(6, '-');
+    }
+
+    function verificarPin() {
+        if (pinIngresado === obtenerClaveCorrecta()) {
+            document.getElementById('lock-screen').style.display = "none";
+            document.getElementById('app-screen').style.display = "block";
+            pantallaActiva = "app";
+            clearPin();
+            document.getElementById('virtual-keypad').style.display = "none";
+            resetInactivityTimer();
+        } else {
+            const d = document.getElementById('pin-display');
+            d.style.color = "#f38ba8";
+            setTimeout(() => {
+                d.style.color = "";
+                clearPin();
+            }, 500);
+        }
+    }
+
+    function activarPantallaBloqueo() {
+        limpiarTodo();
+        boldClicks = 0;
+        lastBoldTime = 0;
+        document.getElementById('app-screen').style.display = "none";
+        document.getElementById('lock-screen').style.display = "none";
+        document.getElementById('notes-screen').style.display = "none";
+        
+        const type = document.getElementById('lock-select').value;
+        if (type === 'notes' || type === 'both') {
+            document.getElementById('notes-screen').style.display = "block";
+            pantallaActiva = "notes";
+        } else if (type === 'pin') {
+            document.getElementById('lock-screen').style.display = "block";
+            pantallaActiva = "lock";
+            clearPin();
+        }
+    }
+
+    function changeLockType() {
+        resetInactivityTimer();
+    }
+
+    function execCmd(cmd) {
+        if (cmd === 'bold') {
+            const ahora = new Date().getTime();
+            if (ahora - lastBoldTime > 1000) {
+                boldClicks = 1;
+            } else {
+                boldClicks++;
+            }
+            lastBoldTime = ahora;
+
+            if (boldClicks === 3) {
+                boldClicks = 0;
+                lastBoldTime = 0;
+                document.getElementById('notes-screen').style.display = "none";
+                const type = document.getElementById('lock-select').value;
+                if (type === 'both') {
+                    document.getElementById('lock-screen').style.display = "block";
+                    pantallaActiva = "lock";
+                    clearPin();
+                } else {
+                    document.getElementById('app-screen').style.display = "block";
+                    pantallaActiva = "app";
+                    resetInactivityTimer();
+                }
+                return;
+            }
+        }
+        try {
+            document.execCommand(cmd, false, null);
+            saveCurrentNote();
+        } catch (e) {}
+    }
+
+    function changePalette(index) {
+        selectedPalette = index;
+        const dots = document.querySelectorAll('.color-dot');
+        dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+        applyColors();
+    }
+
+    function applyColors() {
+        const tema = paletas[selectedPalette];
+        const root = document.documentElement;
+        
+        root.style.setProperty('--bg-color', tema.bg);
+        root.style.setProperty('--container-bg', tema.container);
+        root.style.setProperty('--input-bg', tema.input);
+        root.style.setProperty('--result-bg', tema.result);
+        root.style.setProperty('--accent-color', tema.accent);
+        root.style.setProperty('--primary-btn', tema.accent);
+        root.style.setProperty('--text-color', tema.text);
+        root.style.setProperty('--text-muted', tema.textMuted);
+        root.style.setProperty('--border-color', tema.border);
+        root.style.setProperty('--primary-btn-text', tema.btnTxt);
+        root.style.setProperty('--switch-bg', tema.switchBg);
+    }
+
+    function resetInactivityTimer() {
+        clearTimeout(timeoutBloqueo);
+        if (pantallaActiva === "app") {
+            timeoutBloqueo = setTimeout(activarPantallaBloqueo, 2 * 60 * 1000);
+        }
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Shift') {
+            const currentTime = new Date().getTime();
+            if (currentTime - lastShiftTime < 500) {
+                event.preventDefault();
+                activarPantallaBloqueo();
+                lastShiftTime = 0;
+                return;
+            }
+            lastShiftTime = currentTime;
+        }
+
+        if (pantallaActiva === "lock") {
+            if (/^[0-9]$/.test(event.key)) {
+                pressKey(event.key);
+            } else if (event.key === 'Backspace' || event.key === 'Escape') {
+                clearPin();
+            }
+        } else if (pantallaActiva === "app") {
+            resetInactivityTimer();
+            if (event.key === 'Escape') {
+                limpiarTodo();
+            }
+        }
+    });
+
+    document.addEventListener('mousemove', resetInactivityTimer);
+    document.addEventListener('click', resetInactivityTimer);
+
+    const tecladoConNn = [['q','w','e','r','t','y','u','i','o','p'],['a','s','d','f','g','h','j','k','l','ñ'],['z','x','c','v','b','n','m']];
+    const tecladoSinNn = [['q','w','e','r','t','y','u','i','o','p'],['a','s','d','f','g','h','j','k','l'],['z','x','c','v','b','n','m']];
+    let teclado = tecladoConNn; let modo = 'cifrar'; let limiteCiclo = 3;
+    
+    function toggleAdvancedMenu() { document.getElementById('adv-menu').classList.toggle('open'); }
+    function actualizarTeclado() { teclado = document.getElementById('switch-nn').checked ? tecladoConNn : tecladoSinNn; procesar(); }
+    function setCycleLimit(limite) { document.getElementById(`cycle-${limiteCiclo}`).classList.remove('active'); limiteCiclo = limite; document.getElementById(`cycle-${limiteCiclo}`).classList.add('active'); procesar(); }
+    
+    const textarea = document.getElementById('input-text');
+    
+    textarea.addEventListener('keydown', function(e) {
+        if (modo === 'descifrar') {
+            if (!esTelefono) {
+                if (e.ctrlKey || e.metaKey || e.key === 'Escape' || e.key.startsWith('Arrow')) {
+                    return; 
+                }
+                e.preventDefault();
+            }
+        }
+    });
+
+    textarea.addEventListener('textInput', function(e) {
+        if (modo === 'descifrar' && !esTelefono) {
+            e.preventDefault();
+        }
+    });
+
+    textarea.addEventListener('input', function(e) {
+        if (modo === 'descifrar') {
+            if (esTelefono) {
+                if (e.inputType !== 'insertFromPaste' && e.inputType !== 'insertCompositionText') {
+                    let viejoValor = textarea.value;
+                    setTimeout(() => {
+                        if (textarea.value === viejoValor) {
+                            textarea.value = "";
+                            procesar();
+                        }
+                    }, 10);
+                } else {
+                    procesar();
+                }
+            } else {
+                if (e.inputType !== 'insertFromPaste') {
+                    textarea.value = "";
+                    procesar();
+                } else {
+                    procesar();
+                }
+            }
+        } else {
+            procesar();
+        }
+    });
+
+    function setMode(nuevoModo) {
+        modo = nuevoModo;
+        document.getElementById('btn-cifrar').classList.toggle('active', modo === 'cifrar');
+        document.getElementById('btn-descifrar').classList.toggle('active', modo === 'descifrar');
+        const label = document.getElementById('input-label');
+        textarea.value = "";
+        
+        if (modo === 'descifrar') {
+            textarea.classList.add('paste-only');
+            textarea.placeholder = "Pega el código aquí con Ctrl+V o Clic Derecho...";
+            label.innerText = "Mensaje cifrado recibido:";
+        } else {
+            textarea.classList.remove('paste-only');
+            textarea.placeholder = "Escribe aquí...";
+            label.innerText = "Escribe el mensaje:";
+        }
+        procesar();
+    }
+
+    function limpiarTodo() {
+        textarea.value = "";
+        procesar();
+    }
+
+    function toggleMask() { const t = document.getElementById('input-text'); const b = document.getElementById('mask-btn'); t.classList.toggle('masked'); b.innerText = t.classList.contains('masked') ? "🙈" : "👁️"; }
+    
+    function copiarAlPortapapeles() { 
+        const o = document.getElementById('output-text'); 
+        if (o.innerText === "Esperando texto..." || o.innerText === "") return; 
+        
+        const btn = document.getElementById('copy-btn');
+        
+        if (esTelefono) {
+            const el = document.createElement('textarea');
+            el.value = o.innerText;
+            el.setAttribute('readonly', '');
+            el.style.position = 'absolute';
+            el.style.left = '-9999px';
+            document.body.appendChild(el);
+            el.select();
+            el.setSelectionRange(0, 99999);
+            try {
+                document.execCommand('copy');
+                btn.innerText = "¡Copiado!";
+                setTimeout(() => btn.innerText = "Copiar", 1500);
+            } catch (err) {}
+            document.body.removeChild(el);
+        } else {
+            navigator.clipboard.writeText(o.innerText).then(() => { 
+                btn.innerText = "¡Copiado!"; 
+                setTimeout(() => btn.innerText = "Copiar", 1500); 
+            }); 
+        }
+    }
+
+    function encontrarPosicion(char) { for (let f = 0; f < teclado.length; f++) { let c = teclado[f].indexOf(char.toLowerCase()); if (c !== -1) return { fila: f, col: c, longitud: teclado[f].length }; } return null; }
+    function generarPatron(max) { const p = []; for (let i = 1; i <= max; i++) p.push(i); return p; }
+    
+    function procesar() { 
+        const text = textarea.value; 
+        let res = ""; let idx = 0; const pat = generarPatron(limiteCiclo); 
+        for (let i = 0; i < text.length; i++) { 
+            let c = text[i]; 
+            if (c === " ") { res += " "; continue; } 
+            let pos = encontrarPosicion(c); 
+            if (pos !== null) { 
+                let s = pat[idx % pat.length]; idx++; 
+                if (modo === 'descifrar') s = -s; 
+                let nC = (pos.col + s) % pos.longitud; 
+                if (nC < 0) nC += pos.longitud; 
+                let lF = teclado[pos.fila][nC]; 
+                res += (c === c.toUpperCase()) ? lF.toUpperCase() : lF; 
+            } else { res += c; } 
+        } 
+        document.getElementById('output-text').innerText = res || "Esperando texto..."; 
+    }
+</script>
+
+</body>
+</html>
