@@ -107,6 +107,10 @@
             background-color: #f38ba8;
             color: #11111b;
         }
+        .key-btn.enter {
+            background-color: #a6e3a1;
+            color: #11111b;
+        }
 
         .notes-container {
             background-color: var(--container-bg);
@@ -197,7 +201,7 @@
         }
 
         .container {
-            display: none; 
+            display: none;
             background-color: var(--container-bg);
             padding: 30px;
             border-radius: 12px;
@@ -484,7 +488,7 @@
         <button class="key-btn" onclick="pressKey('9')">9</button>
         <button class="key-btn clear" onclick="clearPin()">✖</button>
         <button class="key-btn" onclick="pressKey('0')">0</button>
-        <button class="key-btn" style="visibility: hidden;"></button>
+        <button class="key-btn enter" onclick="verificarPin()">✔️</button>
     </div>
 </div>
 
@@ -577,13 +581,9 @@
     let boldClicks = 0;
     let lastBoldTime = 0;
     let lastShiftTime = 0;
-
-    // Cargar paleta guardada o usar la 0 (morado) por defecto
     let selectedPalette = parseInt(localStorage.getItem('qwecoder_palette')) || 0;
-
     let dbNotas = JSON.parse(localStorage.getItem('qwecoder_notes_array')) || [{id: Date.now(), title: "Nota Inicial", content: ""}];
     let idNotaActiva = localStorage.getItem('qwecoder_active_note_id') || dbNotas[0].id;
-
     const esTelefono = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
 
     const paletas = [
@@ -603,8 +603,6 @@
         }
         document.getElementById('notes-editor').innerHTML = notaEncontrada.content;
         renderSidebar();
-        
-        // Aplicar la paleta guardada al iniciar la app
         changePalette(selectedPalette);
     });
 
@@ -689,7 +687,7 @@
         const mes = String(ahora.getMonth() + 1).padStart(2, '0');
         const hora = String(ahora.getHours()).padStart(2, '0');
         const minutos = String(ahora.getMinutes()).padStart(2, '0');
-        return mes + hora + minutes; 
+        return mes + hora + minutos; 
     }
 
     function toggleKeypad() {
@@ -701,9 +699,6 @@
         if (pinIngresado.length < 6) {
             pinIngresado += num;
             actualizarPantallaPin();
-        }
-        if (pinIngresado.length === 6) {
-            verificarPin();
         }
     }
 
@@ -761,13 +756,12 @@
     function execCmd(cmd) {
         if (cmd === 'bold') {
             const ahora = new Date().getTime();
-            if (ahora - lastBoldTime > 1000) {
+            if (ahora - lastBoldTime > 500) {
                 boldClicks = 1;
             } else {
                 boldClicks++;
             }
             lastBoldTime = ahora;
-
             if (boldClicks === 3) {
                 boldClicks = 0;
                 lastBoldTime = 0;
@@ -793,7 +787,7 @@
 
     function changePalette(index) {
         selectedPalette = index;
-        localStorage.setItem('qwecoder_palette', index); // Guardar permanentemente la selección
+        localStorage.setItem('qwecoder_palette', index);
         
         const dots = document.querySelectorAll('.color-dot');
         dots.forEach(dot => dot.classList.remove('active'));
@@ -823,7 +817,7 @@
 
     function resetInactivityTimer() {
         clearTimeout(timeoutBloqueo);
-        if (pantallaActiva === "app") {
+        if (pantallaActActive === "app") {
             timeoutBloqueo = setTimeout(activarPantallaBloqueo, 2 * 60 * 1000);
         }
     }
@@ -843,8 +837,13 @@
         if (pantallaActiva === "lock") {
             if (/^[0-9]$/.test(event.key)) {
                 pressKey(event.key);
-            } else if (event.key === 'Backspace' || event.key === 'Escape') {
+            } else if (event.key === 'Backspace') {
+                pinIngresado = pinIngresado.slice(0, -1);
+                actualizarPantallaPin();
+            } else if (event.key === 'Escape') {
                 clearPin();
+            } else if (event.key === 'Enter') {
+                verificarPin();
             }
         } else if (pantallaActiva === "app") {
             resetInactivityTimer();
@@ -859,28 +858,26 @@
 
     const tecladoConNn = [['q','w','e','r','t','y','u','i','o','p'],['a','s','d','f','g','h','j','k','l','ñ'],['z','x','c','v','b','n','m']];
     const tecladoSinNn = [['q','w','e','r','t','y','u','i','o','p'],['a','s','d','f','g','h','j','k','l'],['z','x','c','v','b','n','m']];
-    let teclado = tecladoConNn; let modo = 'cifrar'; let limiteCiclo = 3;
+    let teclado = tecladoConNn; let modo = 'cifrar';
+    let limiteCiclo = 3;
     
     function toggleAdvancedMenu() { document.getElementById('adv-menu').classList.toggle('open'); }
     function actualizarTeclado() { teclado = document.getElementById('switch-nn').checked ? tecladoConNn : tecladoSinNn; procesar(); }
     function setCycleLimit(limite) { document.getElementById(`cycle-${limiteCiclo}`).classList.remove('active'); limiteCiclo = limite; document.getElementById(`cycle-${limiteCiclo}`).classList.add('active'); procesar(); }
     
     const textarea = document.getElementById('input-text');
-    
     textarea.addEventListener('keydown', function(e) {
         if (modo === 'descifrar') {
             if (!esTelefono) {
-                if (e.ctrlKey || e.metaKey || e.key === 'Escape' || e.key.startsWith('Arrow')) {
+                const key = e.key.toLowerCase();
+                if ((e.ctrlKey || e.metaKey) && (key === 'v' || key === 'c' || key === 'a')) {
+                    return; 
+                }
+                if (e.key === 'Escape' || e.key.startsWith('Arrow') || e.key === 'Backspace' || e.key === 'Delete') {
                     return; 
                 }
                 e.preventDefault();
             }
-        }
-    });
-
-    textarea.addEventListener('textInput', function(e) {
-        if (modo === 'descifrar' && !esTelefono) {
-            e.preventDefault();
         }
     });
 
@@ -917,7 +914,6 @@
         document.getElementById('btn-descifrar').classList.toggle('active', modo === 'descifrar');
         const label = document.getElementById('input-label');
         textarea.value = "";
-        
         if (modo === 'descifrar') {
             textarea.classList.add('paste-only');
             textarea.placeholder = "Pega el código aquí con Ctrl+V o Clic Derecho...";
@@ -938,11 +934,10 @@
     function toggleMask() { const t = document.getElementById('input-text'); const b = document.getElementById('mask-btn'); t.classList.toggle('masked'); b.innerText = t.classList.contains('masked') ? "🙈" : "👁️"; }
     
     function copiarAlPortapapeles() { 
-        const o = document.getElementById('output-text'); 
+        const o = document.getElementById('output-text');
         if (o.innerText === "Esperando texto..." || o.innerText === "") return; 
         
         const btn = document.getElementById('copy-btn');
-        
         if (esTelefono) {
             const el = document.createElement('textarea');
             el.value = o.innerText;
@@ -962,7 +957,7 @@
             navigator.clipboard.writeText(o.innerText).then(() => { 
                 btn.innerText = "¡Copiado!"; 
                 setTimeout(() => btn.innerText = "Copiar", 1500); 
-            }); 
+            });
         }
     }
 
@@ -970,19 +965,20 @@
     function generarPatron(max) { const p = []; for (let i = 1; i <= max; i++) p.push(i); return p; }
     
     function procesar() { 
-        const text = textarea.value; 
-        let res = ""; let idx = 0; const pat = generarPatron(limiteCiclo); 
+        const text = textarea.value;
+        let res = ""; let idx = 0; const pat = generarPatron(limiteCiclo);
         for (let i = 0; i < text.length; i++) { 
-            let c = text[i]; 
+            let c = text[i];
             if (c === " ") { res += " "; continue; } 
-            let pos = encontrarPosicion(c); 
+            let pos = encontrarPosicion(c);
             if (pos !== null) { 
-                let s = pat[idx % pat.length]; idx++; 
+                let s = pat[idx % pat.length];
+                idx++; 
                 if (modo === 'descifrar') s = -s; 
-                let nC = (pos.col + s) % pos.longitud; 
+                let nC = (pos.col + s) % pos.longitud;
                 if (nC < 0) nC += pos.longitud; 
                 let lF = teclado[pos.fila][nC]; 
-                res += (c === c.toUpperCase()) ? lF.toUpperCase() : lF; 
+                res += (c === c.toUpperCase()) ? lF.toUpperCase() : lF;
             } else { res += c; } 
         } 
         document.getElementById('output-text').innerText = res || "Esperando texto..."; 
