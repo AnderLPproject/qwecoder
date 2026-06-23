@@ -582,7 +582,7 @@
     let lastBoldTime = 0;
     let lastShiftTime = 0;
     
-    // Carga inicial de datos desde localStorage o valores por defecto
+    // Carga inicial estricta desde localStorage o valores por defecto
     let selectedPalette = parseInt(localStorage.getItem('qwecoder_palette')) || 0;
     let lockTypeSaved = localStorage.getItem('qwecoder_lock_type') || 'notes';
     let switchNnSaved = localStorage.getItem('qwecoder_switch_nn') !== 'false'; // true por defecto
@@ -607,7 +607,13 @@
     let modo = 'cifrar';
 
     window.addEventListener('DOMContentLoaded', () => {
-        // Inicializar Bloc de notas
+        // 1. Sincronizar primero los elementos visuales del HTML con las variables cargadas
+        document.getElementById('lock-select').value = lockTypeSaved;
+        document.getElementById('switch-nn').checked = switchNnSaved;
+        teclado = switchNnSaved ? tecladoConNn : tecladoSinNn;
+        document.getElementById(`cycle-${limiteCiclo}`).classList.add('active');
+
+        // 2. Inicializar el Bloc de notas interno
         let notaEncontrada = dbNotas.find(n => n.id == idNotaActiva);
         if (!notaEncontrada) {
             idNotaActiva = dbNotas[0].id;
@@ -616,19 +622,13 @@
         document.getElementById('notes-editor').innerHTML = notaEncontrada.content;
         renderSidebar();
         
-        // Aplicar paleta guardada
+        // 3. Aplicar colores globales
         changePalette(selectedPalette);
 
-        // Cargar tipo de bloqueo guardado
-        document.getElementById('lock-select').value = lockTypeSaved;
-
-        // Cargar estado de la Ñ guardado
-        document.getElementById('switch-nn').checked = switchNnSaved;
-        teclado = switchNnSaved ? tecladoConNn : tecladoSinNn;
-
-        // Cargar límite de ciclo guardado
-        document.getElementById(`cycle-${limiteCiclo}`).classList.add('active');
+        // 4. Lanzar la pantalla de bloqueo respectiva según el ajuste real recuperado
+        activarPantallaBloqueo();
         
+        // 5. Correr el render base del descifrador
         procesar();
     });
 
@@ -776,7 +776,8 @@
     }
 
     function changeLockType() {
-        localStorage.setItem('qwecoder_lock_type', document.getElementById('lock-select').value);
+        const valorSeleccionado = document.getElementById('lock-select').value;
+        localStorage.setItem('qwecoder_lock_type', valorSeleccionado);
         resetInactivityTimer();
     }
 
