@@ -60,15 +60,16 @@
             border: 1px solid var(--border-color);
             border-radius: 6px;
             height: 45px;
-            font-size: 24px;
-            letter-spacing: 8px;
+            font-size: 20px;
+            letter-spacing: 4px;
             display: flex;
             justify-content: center;
             align-items: center;
             color: var(--text-color);
             font-weight: bold;
-            padding-left: 8px;
             box-sizing: border-box;
+            min-width: 0;
+            overflow: hidden;
         }
 
         .toggle-keypad-btn {
@@ -114,19 +115,24 @@
 
         .notes-container {
             background-color: var(--container-bg);
-            padding: 25px;
+            padding: 20px;
             border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-            width: 100%;
-            max-width: 450px;
+            width: 94vw;
+            max-width: 1100px;
+            height: 85vh;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
             box-sizing: border-box;
-            display: block;
         }
         .notes-toolbar {
             display: flex;
             gap: 5px;
             margin-bottom: 10px;
             align-items: center;
+            flex-wrap: wrap;
+            flex-shrink: 0;
         }
         .notes-btn {
             background-color: var(--border-color);
@@ -141,6 +147,10 @@
         .notes-btn.accent {
             background-color: var(--accent-color);
             color: var(--primary-btn-text);
+        }
+        .notes-btn.danger {
+            background-color: #f38ba8;
+            color: #11111b;
         }
         .notes-manager-toggle {
             margin-left: auto;
@@ -158,8 +168,9 @@
             border-radius: 6px;
             margin-bottom: 10px;
             padding: 10px;
-            max-height: 150px;
+            max-height: 140px;
             overflow-y: auto;
+            flex-shrink: 0;
         }
         .notes-sidebar.open {
             display: block;
@@ -188,12 +199,12 @@
 
         .notes-editor {
             width: 100%;
-            min-height: 250px;
+            flex: 1;
             background-color: var(--input-bg);
             color: var(--text-color);
             border: 1px solid var(--border-color);
             border-radius: 6px;
-            padding: 12px;
+            padding: 15px;
             box-sizing: border-box;
             overflow-y: auto;
             outline: none;
@@ -425,7 +436,7 @@
             transform: translateX(24px);
         }
 
-        select {
+        select, .input-text-small {
             background-color: var(--border-color);
             color: var(--text-color);
             border: none;
@@ -433,6 +444,13 @@
             border-radius: 6px;
             font-weight: bold;
             outline: none;
+        }
+
+        .input-text-small {
+            width: 90px;
+            text-align: center;
+            font-family: monospace;
+            letter-spacing: 2px;
         }
         
         .cycle-buttons {
@@ -473,7 +491,7 @@
 
 <div class="lock-container" id="lock-screen">
     <div class="display-row">
-        <div class="pin-display" id="pin-display">------</div>
+        <div class="pin-display" id="pin-display"></div>
         <button class="toggle-keypad-btn" onclick="toggleKeypad()">⌨️</button>
     </div>
     <div class="keypad" id="virtual-keypad">
@@ -497,7 +515,8 @@
         <button class="notes-btn" onclick="execCmd('bold')">B</button>
         <button class="notes-btn" onclick="execCmd('italic')">I</button>
         <button class="notes-btn" onclick="execCmd('strikeThrough')">S</button>
-        <button class="notes-btn accent" onclick="createNewNote()">+ Nueva</button>
+        <button class="notes-btn accent" id="new-note-btn" onclick="createNewNote()">+ Nueva</button>
+        <button class="notes-btn danger" id="fake-return-btn" style="display:none;" onclick="salirModoFalso()">↩ Salir</button>
         <button class="notes-manager-toggle" onclick="toggleNotesSidebar()">📁</button>
     </div>
     <div class="notes-sidebar" id="notes-sidebar"></div>
@@ -544,6 +563,10 @@
             </select>
         </div>
         <div class="setting-row">
+            <span class="setting-label">PIN Falso (Engaño)</span>
+            <input type="password" id="decoy-pin-input" class="input-text-small" maxlength="6" placeholder="Ej: 1234" oninput="saveDecoyPin()">
+        </div>
+        <div class="setting-row">
             <span class="setting-label">Paleta de color</span>
             <div class="color-palette">
                 <div class="color-dot" id="dot-0" style="background:#cba6f7;" onclick="changePalette(0)"></div>
@@ -581,15 +604,24 @@
     let boldClicks = 0;
     let lastBoldTime = 0;
     let lastShiftTime = 0;
+    let esModoFalso = false; 
     
-    // Carga inicial estricta desde localStorage o valores por defecto
     let selectedPalette = parseInt(localStorage.getItem('qwecoder_palette')) || 0;
     let lockTypeSaved = localStorage.getItem('qwecoder_lock_type') || 'notes';
-    let switchNnSaved = localStorage.getItem('qwecoder_switch_nn') !== 'false'; // true por defecto
+    let switchNnSaved = localStorage.getItem('qwecoder_switch_nn') !== 'false'; 
     let limiteCiclo = parseInt(localStorage.getItem('qwecoder_cycle_limit')) || 3;
+    let decoyPinSaved = localStorage.getItem('qwecoder_decoy_pin') || '';
 
-    let dbNotas = JSON.parse(localStorage.getItem('qwecoder_notes_array')) || [{id: Date.now(), title: "Nota Inicial", content: ""}];
+    let dbNotasReales = JSON.parse(localStorage.getItem('qwecoder_notes_array')) || [{id: Date.now(), title: "Nota Inicial", content: "Esta es tu nota privada real."}];
+    let dbNotasFalsas = JSON.parse(localStorage.getItem('qwecoder_fake_notes_array')) || [
+        { id: 101, title: "Lista de Compras", content: "<div>- Leche semidescremada</div><div>- Café en grano</div><div>- Pechuga de pollo</div><div>- Detergente para ropa</div>" },
+        { id: 102, title: "Recordatorios Casa", content: "<div>Llamar al técnico de la moped el jueves por la tarde sin falta. Pagar servicio de internet antes del 5.</div>" },
+        { id: 103, title: "Ideas Proyecto", content: "<div>Diseñar un clon simple de Flappy Bird en JavaScript básico para practicar manipulación del DOM.</div>" }
+    ];
+    let dbNotas = [...dbNotasReales];
+
     let idNotaActiva = localStorage.getItem('qwecoder_active_note_id') || dbNotas[0].id;
+    let idNotaFalsaActiva = dbNotasFalsas[0].id; 
     const esTelefono = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
 
     const paletas = [
@@ -607,13 +639,13 @@
     let modo = 'cifrar';
 
     window.addEventListener('DOMContentLoaded', () => {
-        // 1. Sincronizar primero los elementos visuales del HTML con las variables cargadas
         document.getElementById('lock-select').value = lockTypeSaved;
         document.getElementById('switch-nn').checked = switchNnSaved;
+        document.getElementById('decoy-pin-input').value = decoyPinSaved;
         teclado = switchNnSaved ? tecladoConNn : tecladoSinNn;
         document.getElementById(`cycle-${limiteCiclo}`).classList.add('active');
 
-        // 2. Inicializar el Bloc de notas interno
+        dbNotas = [...dbNotasReales];
         let notaEncontrada = dbNotas.find(n => n.id == idNotaActiva);
         if (!notaEncontrada) {
             idNotaActiva = dbNotas[0].id;
@@ -622,31 +654,44 @@
         document.getElementById('notes-editor').innerHTML = notaEncontrada.content;
         renderSidebar();
         
-        // 3. Aplicar colores globales
         changePalette(selectedPalette);
-
-        // 4. Lanzar la pantalla de bloqueo respectiva según el ajuste real recuperado
         activarPantallaBloqueo();
-        
-        // 5. Correr el render base del descifrador
         procesar();
     });
 
+    function saveDecoyPin() {
+        let val = document.getElementById('decoy-pin-input').value;
+        localStorage.setItem('qwecoder_decoy_pin', val);
+        decoyPinSaved = val;
+    }
+
     function createNewNote() {
         const nueva = { id: Date.now(), title: "Nueva nota", content: "" };
-        dbNotas.push(nueva);
-        idNotaActiva = nueva.id;
+        if (esModoFalso) {
+            dbNotasFalsas.push(nueva);
+            dbNotas = [...dbNotasFalsas];
+            idNotaFalsaActiva = nueva.id;
+            localStorage.setItem('qwecoder_fake_notes_array', JSON.stringify(dbNotasFalsas));
+        } else {
+            dbNotasReales.push(nueva);
+            dbNotas = [...dbNotasReales];
+            idNotaActiva = nueva.id;
+            saveNotesToStorage();
+        }
         document.getElementById('notes-editor').innerHTML = "";
         document.getElementById('notes-editor').focus();
-        saveNotesToStorage();
         renderSidebar();
     }
 
     function selectNote(id) {
-        idNotaActiva = id;
+        if (esModoFalso) {
+            idNotaFalsaActiva = id;
+        } else {
+            idNotaActiva = id;
+            localStorage.setItem('qwecoder_active_note_id', idNotaActiva);
+        }
         const nota = dbNotas.find(n => n.id == id);
         document.getElementById('notes-editor').innerHTML = nota ? nota.content : "";
-        localStorage.setItem('qwecoder_active_note_id', idNotaActiva);
         renderSidebar();
     }
 
@@ -656,38 +701,53 @@
             alert("Debes mantener al menos una nota activa.");
             return;
         }
-        dbNotas = dbNotas.filter(n => n.id != id);
-        if(idNotaActiva == id) {
-            idNotaActiva = dbNotas[0].id;
-            document.getElementById('notes-editor').innerHTML = dbNotas[0].content;
+        if (esModoFalso) {
+            dbNotasFalsas = dbNotasFalsas.filter(n => n.id != id);
+            dbNotas = [...dbNotasFalsas];
+            if(idNotaFalsaActiva == id) idNotaFalsaActiva = dbNotasFalsas[0].id;
+            localStorage.setItem('qwecoder_fake_notes_array', JSON.stringify(dbNotasFalsas));
+            selectNote(idNotaFalsaActiva);
+        } else {
+            dbNotasReales = dbNotasReales.filter(n => n.id != id);
+            dbNotas = [...dbNotasReales];
+            if(idNotaActiva == id) idNotaActiva = dbNotasReales[0].id;
+            saveNotesToStorage();
+            selectNote(idNotaActiva);
         }
-        saveNotesToStorage();
-        renderSidebar();
     }
 
     function saveCurrentNote() {
         const editor = document.getElementById('notes-editor');
-        const nota = dbNotas.find(n => n.id == idNotaActiva);
+        let currentId = esModoFalso ? idNotaFalsaActiva : idNotaActiva;
+        const nota = dbNotas.find(n => n.id == currentId);
+        
         if(nota) {
             nota.content = editor.innerHTML;
             let plainText = editor.innerText.trim();
             nota.title = plainText.substring(0, 20) || "Nota vacía";
         }
-        saveNotesToStorage();
+        
+        if (esModoFalso) {
+            localStorage.setItem('qwecoder_fake_notes_array', JSON.stringify(dbNotasFalsas));
+        } else {
+            saveNotesToStorage();
+        }
         renderSidebar();
     }
 
     function saveNotesToStorage() {
-        localStorage.setItem('qwecoder_notes_array', JSON.stringify(dbNotas));
+        localStorage.setItem('qwecoder_notes_array', JSON.stringify(dbNotasReales));
         localStorage.setItem('qwecoder_active_note_id', idNotaActiva);
     }
 
     function renderSidebar() {
         const sidebar = document.getElementById('notes-sidebar');
         sidebar.innerHTML = "";
+        let currentActiveId = esModoFalso ? idNotaFalsaActiva : idNotaActiva;
+        
         dbNotas.forEach(n => {
             const item = document.createElement('div');
-            item.className = `notes-list-item ${n.id == idNotaActiva ? 'active' : ''}`;
+            item.className = `notes-list-item ${n.id == currentActiveId ? 'active' : ''}`;
             item.onclick = () => selectNote(n.id);
 
             const titleSpan = document.createElement('span');
@@ -722,7 +782,7 @@
     }
 
     function pressKey(num) {
-        if (pinIngresado.length < 6) {
+        if (pinIngresado.length < 8) {
             pinIngresado += num;
             actualizarPantallaPin();
         }
@@ -735,11 +795,33 @@
 
     function actualizarPantallaPin() {
         const d = document.getElementById('pin-display');
-        d.innerText = pinIngresado.padEnd(6, '-');
+        d.innerText = "●".repeat(pinIngresado.length);
     }
 
     function verificarPin() {
+        if (pinIngresado === "") return;
+
+        if (decoyPinSaved !== "" && pinIngresado === decoyPinSaved) {
+            esModoFalso = true;
+            dbNotas = [...dbNotasFalsas]; 
+            idNotaFalsaActiva = dbNotasFalsas[0].id;
+            
+            document.getElementById('fake-return-btn').style.display = "inline-block"; 
+            document.getElementById('lock-screen').style.display = "none";
+            document.getElementById('notes-screen').style.display = "flex"; 
+            pantallaActiva = "notes";
+            
+            selectNote(idNotaFalsaActiva);
+            clearPin();
+            document.getElementById('virtual-keypad').style.display = "none";
+            return;
+        }
+
         if (pinIngresado === obtenerClaveCorrecta()) {
+            esModoFalso = false;
+            dbNotas = [...dbNotasReales];
+            document.getElementById('fake-return-btn').style.display = "none";
+
             document.getElementById('lock-screen').style.display = "none";
             document.getElementById('app-screen').style.display = "block";
             pantallaActiva = "app";
@@ -756,6 +838,10 @@
         }
     }
 
+    function salirModoFalso() {
+        activarPantallaBloqueo();
+    }
+
     function activarPantallaBloqueo() {
         limpiarTodo();
         boldClicks = 0;
@@ -764,10 +850,15 @@
         document.getElementById('lock-screen').style.display = "none";
         document.getElementById('notes-screen').style.display = "none";
         
+        esModoFalso = false;
+        dbNotas = [...dbNotasReales];
+        document.getElementById('fake-return-btn').style.display = "none";
+
         const type = document.getElementById('lock-select').value;
         if (type === 'notes' || type === 'both') {
-            document.getElementById('notes-screen').style.display = "block";
+            document.getElementById('notes-screen').style.display = "flex";
             pantallaActiva = "notes";
+            selectNote(dbNotasReales[0].id);
         } else if (type === 'pin') {
             document.getElementById('lock-screen').style.display = "block";
             pantallaActiva = "lock";
@@ -783,6 +874,7 @@
 
     function execCmd(cmd) {
         if (cmd === 'bold') {
+            if (esModoFalso) return; 
             const ahora = new Date().getTime();
             if (ahora - lastBoldTime > 500) {
                 boldClicks = 1;
