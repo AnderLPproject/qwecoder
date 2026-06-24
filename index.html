@@ -555,15 +555,15 @@
     <button class="adv-toggle-btn" onclick="toggleAdvancedMenu()">Ajustes Avanzados</button>
     <div class="adv-menu" id="adv-menu">
         <div class="setting-row">
-            <span class="setting-label">Bloqueo por inactividad</span>
+            <span class="setting-label">Tipo de bloqueo</span>
             <select id="lock-select" onchange="changeLockType()">
-                <option value="notes">Bloc de notas</option>
-                <option value="pin">PIN de acceso</option>
+                <option value="notes">Bloc de Notas</option>
+                <option value="pin">PIN 6 Dígitos (Mes + Hora)</option>
                 <option value="both">Ambos</option>
             </select>
         </div>
         <div class="setting-row">
-            <span class="setting-label">PIN Falso (Engaño)</span>
+            <span class="setting-label">PIN Falso (Opcional)</span>
             <input type="password" id="decoy-pin-input" class="input-text-small" maxlength="6" placeholder="Ej: 1234" oninput="saveDecoyPin()">
         </div>
         <div class="setting-row">
